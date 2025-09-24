@@ -3,108 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aruu & Lakshu ❤️</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #333;
-    }
-    header {
-      background: #ff6b6b;
-      color: #fff;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    header img {
-      height: 40px;
-      border-radius: 8px;
-    }
-    header h1 {
-      font-size: 20px;
-      margin: 0;
-    }
-    .hero {
-      text-align: center;
-      padding: 40px 20px;
-      background: #ffeaea;
-    }
-    .hero h2 {
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-    .product {
-      max-width: 320px;
-      margin: 40px auto;
-      text-align: center;
-      border: 2px solid #eee;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .product img {
-      width: 100%;
-      border-radius: 8px;
-      margin-bottom: 15px;
-    }
-    .product h3 {
-      margin: 10px 0;
-    }
-    .product p {
-      font-size: 14px;
-      color: #444;
-      margin-bottom: 20px;
-    }
-    .buy-btn {
-      background: #ff6b6b;
-      color: #fff;
-      padding: 12px 20px;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: bold;
-      display: inline-block;
-    }
-    footer {
-      text-align: center;
-      padding: 15px;
-      background: #f5f5f5;
-      font-size: 14px;
-      margin-top: 40px;
-    }
-  </style>
+  <title>ColorTrade Payment</title>
 </head>
-<body>
+<body style="font-family: Arial; text-align:center; padding:50px; background:#f5f5f5;">
+  
+  <h2>Buy Palette</h2>
+  <p>Price: <strong>₹100</strong></p>
 
-  <header>
-    <h1>Aruu & Lakshu ❤️</h1>
-    <img src="https://i.ibb.co/6c1QNLGt/IMG-20250924-153953.jpg" alt="Logo">
-  </header>
+  <!-- Payment Button -->
+  <button id="payBtn" style="padding:12px 20px; background:#06b6d4; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer;">
+    Pay with UPI
+  </button>
 
-  <div class="hero">
-    <h2>Welcome to Our Website</h2>
-    <p>Special love moments and creations ❤️</p>
-  </div>
-
-  <!-- PRODUCT CARD -->
-  <div class="product">
-    <img src="https://i.ibb.co/6c1QNLGt/IMG-20250924-153953.jpg" alt="Wallpaper Pack">
-    <h3>Aruu ❤️ Lakshu Wallpapers</h3>
-    <p>Get our exclusive wallpaper pack and support us!</p>
-    <a class="buy-btn" href="upi://pay?pa=7000482653-2@ibl&pn=Aryan%20Keer&am=99&cu=INR">
-      💖 Pay ₹99 with UPI
-    </a>
-    <p style="margin-top:10px; font-size:13px; color:#555;">
-      UPI ID: 7000482653-2@ibl
-    </p>
-  </div>
-
-  <footer>
-    © 2025 Aruu & Lakshu. All rights reserved.
-  </footer>
-
+  <!-- Razorpay Checkout -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    document.getElementById('payBtn').onclick = function(e){
+        var options = {
+            "key": "rzp_test_xxxxxx", // <-- apna Razorpay Key ID daalna
+            "amount": 10000, // ₹100 (100 * 100 paise)
+            "currency": "INR",
+            "name": "ColorTrade",
+            "description": "Palette Purchase",
+            "handler": function (response){
+                alert("✅ Payment Successful! Payment ID: " + response.razorpay_payment_id);
+            },
+            "prefill": {
+                "email": "customer@example.com",
+                "contact": "9876543210"
+            },
+            "method": {
+                "upi": true
+            },
+            "theme": {
+                "color": "#06b6d4"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+        e.preventDefault();
+    }
+  </script>
 </body>
 </html>
