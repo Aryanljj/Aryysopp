@@ -1,48 +1,291 @@
-<!DOCTYPE html>
+<!doctype html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ColorTrade Payment</title>
-</head>
-<body style="font-family: Arial; text-align:center; padding:50px; background:#f5f5f5;">
-  
-  <h2>Buy Palette</h2>
-  <p>Price: <strong>₹100</strong></p>
-
-  <!-- Payment Button -->
-  <button id="payBtn" style="padding:12px 20px; background:#06b6d4; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer;">
-    Pay with UPI
-  </button>
-
-  <!-- Razorpay Checkout -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script>
-    document.getElementById('payBtn').onclick = function(e){
-        var options = {
-            "key": "rzp_test_xxxxxx", // <-- apna Razorpay Key ID daalna
-            "amount": 10000, // ₹100 (100 * 100 paise)
-            "currency": "INR",
-            "name": "ColorTrade",
-            "description": "Palette Purchase",
-            "handler": function (response){
-                alert("✅ Payment Successful! Payment ID: " + response.razorpay_payment_id);
-            },
-            "prefill": {
-                "email": "customer@example.com",
-                "contact": "9876543210"
-            },
-            "method": {
-                "upi": true
-            },
-            "theme": {
-                "color": "#06b6d4"
-            }
-        };
-        var rzp1 = new Razorpay(options);
-        rzp1.open();
-        e.preventDefault();
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ColorTrade — Marketplace for Palettes</title>
+  <meta name="description" content="Buy, sell and trade color palettes. Simple demo app with wallet, create palette, and simulated payments." />  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#06b6d4; --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02); --success: #10b981; --danger:#ef4444;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-  </script>
-</body>
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071023 0%, #071829 100%);color:#e6eef6}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:54px;height:54px;background:linear-gradient(135deg,var(--accent),#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .logo span{font-size:20px}
+    h1{margin:0;font-size:20px}
+    p.tag{margin:0;color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:12px;align-items:center}
+    .btn{background:var(--accent);color:#042027;padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+
+    .top-grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:18px}
+
+    .card{background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.02));padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .wallet{display:flex;flex-direction:column;gap:12px}
+    .balance{font-size:28px;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+
+    .search-row{display:flex;gap:8px;align-items:center}
+    .search-row input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
+
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:8px 10px;border-radius:999px;background:var(--glass-2);border:1px solid rgba(255,255,255,0.02);cursor:pointer;color:var(--muted);font-weight:600}
+    .chip.active{background:linear-gradient(90deg,#073240, #05293a);color:var(--accent);border:1px solid rgba(6,182,212,0.14)}
+
+    .market{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+    .palette-card{border-radius:12px;padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.03)}
+    .swatches{display:flex;height:72px;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,0.2)}
+    .swatch{flex:1}
+    .pc-info{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .pc-title{font-weight:700}
+    .price{font-weight:800}
+    .pc-actions{display:flex;gap:8px;margin-top:10px}
+
+    .create-form{display:flex;flex-direction:column;gap:10px}
+    .create-form input[type=color]{height:44px;border-radius:8px;border:0;padding:6px}
+    .row{display:flex;gap:8px}
+
+    footer{margin-top:26px;text-align:center;color:var(--muted);font-size:13px}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:linear-gradient(0deg, rgba(0,0,0,0.5), rgba(0,0,0,0.6));display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{background:linear-gradient(180deg,#071428,#0b1a2a);padding:18px;border-radius:12px;min-width:320px;max-width:520px}
+    .modal.show{display:block}
+
+    /* responsive */
+    @media (max-width:880px){.top-grid{grid-template-columns:1fr}.wallet{order:2}}
+  </style></head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo"><span>CT</span></div>
+        <div>
+          <h1>ColorTrade</h1>
+          <p class="tag">Buy • Sell • Trade beautiful color palettes</p>
+        </div>
+      </div><div class="controls">
+    <div class="muted">Wallet: <strong id="walletAmount">₹ 500</strong></div>
+    <button class="btn" id="depositBtn">Deposit</button>
+    <button class="btn ghost" id="connectBtn">Connect Wallet</button>
+  </div>
+</header>
+
+<div class="top-grid">
+  <main class="card">
+    <div class="search-row">
+      <input id="search" placeholder="Search palettes, tags or creators..." />
+      <select id="sort">
+        <option value="new">Newest</option>
+        <option value="price-asc">Price ↑</option>
+        <option value="price-desc">Price ↓</option>
+      </select>
+    </div>
+
+    <div style="margin-top:12px" class="filters" id="tagFilters">
+      <!-- dynamic tags -->
+    </div>
+
+    <section class="market" id="market">
+      <!-- palettes injected here -->
+    </section>
+
+  </main>
+
+  <aside class="card wallet">
+    <div>
+      <div class="muted">Your Balance</div>
+      <div class="balance">₹ <span id="balanceValue">500</span></div>
+      <div class="muted">Active holdings: <span id="holdingsCount">0</span></div>
+    </div>
+
+    <hr style="border:none;height:1px;background:rgba(255,255,255,0.03);margin:12px 0">
+
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="muted">Create & sell</div>
+        <div class="muted" style="font-size:12px">Instant listing</div>
+      </div>
+
+      <form id="createForm" class="create-form" onsubmit="return false;">
+        <input id="palName" placeholder="Palette name (eg. Sunset Vibes)" />
+        <div class="row">
+          <input type="color" id="c1" value="#ff7a59">
+          <input type="color" id="c2" value="#ffd166">
+          <input type="color" id="c3" value="#06d6a0">
+          <input type="color" id="c4" value="#4d96ff">
+        </div>
+        <input id="palPrice" placeholder="Price (₹)" type="number" min="10" value="49" />
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="createBtn">List Palette</button>
+          <button class="btn ghost" id="clearForm">Clear</button>
+        </div>
+      </form>
+    </div>
+  </aside>
+</div>
+
+<footer class="muted">This is a demo. No real money transactions occur. Export or download palettes and integrate a real payment gateway when ready.</footer>
+
+  </div>  <!-- Modal: Buy / Deposit -->  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <div id="modalContent"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn ghost" id="modalClose">Close</button>
+      </div>
+    </div>
+  </div>  <script>
+    // --- sample data store ---
+    const samplePalettes = [
+      {id:1,name:'Sunset Warmth',colors:['#FF6B6B','#FFD166','#FFEDBC','#2EC4B6'],price:79,creator:'Aruu',tags:['sunset','warm']},
+      {id:2,name:'Ocean Deep',colors:['#012A4A','#2A6F97','#2E8BC0','#BFD7EA'],price:99,creator:'Aryan',tags:['ocean','blue']},
+      {id:3,name:'Neon Pop',colors:['#FF3CAC','#FFD166','#06D6A0','#8338EC'],price:149,creator:'Zee',tags:['neon','vibrant']},
+      {id:4,name:'Earth Tones',colors:['#7C6A53','#B08968','#D9CAB3','#EAE2B7'],price:59,creator:'Maya',tags:['earth','muted']}
+    ];
+
+    // state
+    let market = JSON.parse(localStorage.getItem('ct_market')) || samplePalettes.slice();
+    let wallet = Number(localStorage.getItem('ct_wallet')) || 500;
+    let holdings = JSON.parse(localStorage.getItem('ct_holdings')) || [];
+
+    const els = {
+      market: document.getElementById('market'),
+      balanceValue: document.getElementById('balanceValue'),
+      walletAmount: document.getElementById('walletAmount'),
+      holdingsCount: document.getElementById('holdingsCount'),
+      tagFilters: document.getElementById('tagFilters'),
+      search: document.getElementById('search'),
+      sort: document.getElementById('sort'),
+      modalBackdrop: document.getElementById('modalBackdrop'),
+      modalContent: document.getElementById('modalContent'),
+      depositBtn: document.getElementById('depositBtn'),
+      connectBtn: document.getElementById('connectBtn')
+    }
+
+    function saveState(){
+      localStorage.setItem('ct_market', JSON.stringify(market));
+      localStorage.setItem('ct_wallet', wallet);
+      localStorage.setItem('ct_holdings', JSON.stringify(holdings));
+    }
+
+    // render functions
+    function renderWallet(){
+      els.balanceValue.textContent = wallet;
+      els.walletAmount.textContent = '₹ ' + wallet;
+      els.holdingsCount.textContent = holdings.length;
+    }
+
+    function uniqueTags(){
+      const t = new Set(); market.forEach(p=>p.tags.forEach(tag=>t.add(tag)));
+      return Array.from(t);
+    }
+
+    function renderTags(){
+      const tags = uniqueTags();
+      els.tagFilters.innerHTML = '';
+      const all = document.createElement('div'); all.className='chip active'; all.textContent='All'; all.onclick = ()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); all.classList.add('active'); renderMarket();}
+      els.tagFilters.appendChild(all);
+      tags.forEach(tag=>{
+        const d = document.createElement('div'); d.className='chip'; d.textContent=tag; d.onclick = ()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); d.classList.add('active'); renderMarket(tag)};
+        els.tagFilters.appendChild(d);
+      })
+    }
+
+    function renderMarket(filterTag){
+      const q = els.search.value.trim().toLowerCase();
+      let list = market.slice();
+      if(filterTag) list = list.filter(p=>p.tags.includes(filterTag));
+      if(q) list = list.filter(p=> (p.name + p.creator + p.tags.join(' ')).toLowerCase().includes(q));
+      const sortVal = els.sort.value;
+      if(sortVal==='price-asc') list.sort((a,b)=>a.price-b.price);
+      if(sortVal==='price-desc') list.sort((a,b)=>b.price-a.price);
+      if(sortVal==='new') list.sort((a,b)=>b.id-a.id);
+
+      els.market.innerHTML = '';
+      if(list.length===0){els.market.innerHTML = '<div class="muted">No palettes found.</div>';return}
+
+      list.forEach(p=>{
+        const card = document.createElement('div'); card.className='palette-card';
+        const sw = document.createElement('div'); sw.className='swatches';
+        p.colors.forEach(c=>{const s=document.createElement('div');s.className='swatch';s.style.background=c;sw.appendChild(s)});
+        card.appendChild(sw);
+        const info = document.createElement('div'); info.className='pc-info';
+        info.innerHTML = `<div><div class="pc-title">${p.name}</div><div class="muted" style="font-size:12px">by ${p.creator} • ${p.tags.join(', ')}</div></div><div class="price">₹ ${p.price}</div>`;
+        card.appendChild(info);
+        const actions = document.createElement('div'); actions.className='pc-actions';
+        const buy = document.createElement('button'); buy.className='btn'; buy.textContent='Buy'; buy.onclick = ()=>openBuyModal(p.id);
+        const sell = document.createElement('button'); sell.className='btn ghost'; sell.textContent='Sell'; sell.onclick = ()=>openSellModal(p.id);
+        const download = document.createElement('button'); download.className='btn ghost'; download.textContent='Export'; download.onclick = ()=>exportPalette(p);
+        actions.appendChild(buy); actions.appendChild(sell); actions.appendChild(download);
+        card.appendChild(actions);
+        els.market.appendChild(card);
+      })
+    }
+
+    // actions
+    function openBuyModal(id){
+      const p = market.find(x=>x.id===id); if(!p) return;
+      showModal(`<h3>Buy ${p.name}</h3><p class="muted">by ${p.creator} — Price ₹ ${p.price}</p><div style="margin-top:12px"><div class="swatches">${p.colors.map(c=>`<div class=\"swatch\" style=\"background:${c}\"></div>`).join('')}</div></div><div style=\"margin-top:12px;display:flex;gap:8px;justify-content:flex-end\"><button class=\"btn\" id=\"confirmBuy\">Confirm Purchase</button><button class=\"btn ghost\" id=\"cancelBuy\">Cancel</button></div>`);
+      document.getElementById('confirmBuy').onclick = ()=>{ if(wallet < p.price){alert('Insufficient balance. Deposit to proceed.');return;} wallet -= p.price; holdings.push(p); saveState(); renderWallet(); renderMarket(); closeModal(); alert('Purchase successful — added to your holdings.'); }
+      document.getElementById('cancelBuy').onclick = closeModal;
+    }
+
+    function openSellModal(id){
+      const p = market.find(x=>x.id===id); if(!p) return;
+      showModal(`<h3>Sell ${p.name}</h3><p class="muted">List this palette for sale or remove from market.</p><div style=\"margin-top:12px\"><label>New price (₹)</label><input id=\"sellPrice\" type=\"number\" value=\"${p.price}\" style=\"width:100%;padding:8px;border-radius:8px;margin-top:6px;border:1px solid rgba(255,255,255,0.03)\"></div><div style=\"margin-top:12px;display:flex;gap:8px;justify-content:flex-end\"><button class=\"btn\" id=\"confirmSell\">Update Price</button><button class=\"btn ghost\" id=\"removeListing\">Remove</button></div>`);
+      document.getElementById('confirmSell').onclick = ()=>{ const v = Number(document.getElementById('sellPrice').value); if(v<1){alert('Invalid price');return;} p.price = v; saveState(); renderMarket(); closeModal(); };
+      document.getElementById('removeListing').onclick = ()=>{ if(!confirm('Remove listing?')) return; market = market.filter(x=>x.id!==id); saveState(); renderMarket(); closeModal(); };
+    }
+
+    function exportPalette(p){
+      const data = {name:p.name,creator:p.creator,colors:p.colors,tags:p.tags};
+      const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download = p.name.replace(/\s+/g,'_') + '.palette.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    function showModal(html){ els.modalBackdrop.style.display='flex'; els.modalContent.innerHTML = html; }
+    function closeModal(){ els.modalBackdrop.style.display='none'; els.modalContent.innerHTML=''; }
+    document.getElementById('modalClose').onclick = closeModal;
+    els.modalBackdrop.onclick = (e)=>{ if(e.target===els.modalBackdrop) closeModal(); }
+
+    // deposit simulation with QR
+    document.getElementById('depositBtn').onclick = ()=>{
+      showModal(`<h3>Deposit Funds</h3><p class=\"muted\">Scan QR with your UPI app or simulate deposit below. (Demo only)</p><div style=\"display:flex;gap:12px;align-items:center\"><div style=\"width:150px;height:150px;border-radius:12px;background:white;display:flex;align-items:center;justify-content:center;color:black\">QR</div><div style=\"flex:1\"><input id=\"depAmount\" type=\"number\" placeholder=\"Amount (₹)\" style=\"width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit\"><div style=\"display:flex;gap:8px;margin-top:8px;justify-content:flex-end\"><button class=\"btn\" id=\"doDeposit\">Simulate Deposit</button></div></div></div>`);
+      document.getElementById('doDeposit').onclick = ()=>{ const v = Number(document.getElementById('depAmount').value); if(!v || v<=0){alert('Enter valid amount');return;} wallet += v; saveState(); renderWallet(); closeModal(); alert('Deposit simulated.'); }
+    }
+
+    // connect wallet (demo)
+    document.getElementById('connectBtn').onclick = ()=>{ if(confirm('Connect demo wallet?')){ alert('Wallet connected.'); } }
+
+    // create form
+    document.getElementById('createBtn').onclick = ()=>{
+      const name = document.getElementById('palName').value.trim() || ('Palette ' + (Date.now()%1000));
+      const colors = [document.getElementById('c1').value,document.getElementById('c2').value,document.getElementById('c3').value,document.getElementById('c4').value];
+      const price = Number(document.getElementById('palPrice').value) || 49;
+      const id = Math.max(0,...market.map(m=>m.id))+1;
+      const t = name.split(' ').slice(0,2).map(x=>x.toLowerCase());
+      market.unshift({id,name,colors,price,creator:'You',tags:t});
+      saveState(); renderTags(); renderMarket(); document.getElementById('createForm').reset();
+    }
+    document.getElementById('clearForm').onclick = ()=>{ document.getElementById('createForm').reset(); }
+
+    // search and sort
+    els.search.oninput = ()=>renderMarket(); els.sort.onchange = ()=>renderMarket();
+
+    // initial render
+    renderTags(); renderMarket(); renderWallet();
+
+    // small helper: clear localStorage from console if testing
+    window._CT = {market, wallet, holdings, saveState};
+
+  </script></body>
 </html>
